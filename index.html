@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Genotype Quiz</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #E9EEF4;
+    --ink: #15233A;
+    --muted: #55657C;
+    --btn-bg: #FFFFFF;
+    --btn-hover: #DCE4EE;
+    --tick-empty: #C6D0DC;
+    --tick-fill: #15233A;
+    --good: #1F9D55;
+    --bad: #D33A3A;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #101A2B;
+      --ink: #EAF0F7;
+      --muted: #9CAABD;
+      --btn-bg: #1A2740;
+      --btn-hover: #24345280;
+      --tick-empty: #2B3A56;
+      --tick-fill: #EAF0F7;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #101A2B;
+    --ink: #EAF0F7;
+    --muted: #9CAABD;
+    --btn-bg: #1A2740;
+    --btn-hover: #24345280;
+    --tick-empty: #2B3A56;
+    --tick-fill: #EAF0F7;
+  }
+  *, *::before, *::after { box-sizing: inherit; }
+  html { height: 100%; scroll-padding-top: env(safe-area-inset-top, 0px); }
+  body {
+    height: 100%;
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Atkinson Hyperlegible", "Verdana", "Segoe UI", system-ui, sans-serif;
+    overflow: hidden;
+  }
+
+  #app {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1.25rem 1rem 2rem;
+    transition: transform 900ms cubic-bezier(.34,1.56,.64,1);
+    transform-origin: 50% 50%;
+  }
+  body.tilted #app { transform: rotate(-9deg) scale(.9); }
+
+  /* Score */
+  header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .6rem;
+    width: 100%;
+  }
+  .score {
+    font-size: clamp(1.75rem, 5vw, 2.75rem);
+    font-weight: 700;
+    line-height: 1.1;
+    text-align: center;
+  }
+  .score .goal { color: var(--muted); font-weight: 400; }
+  .ticks {
+    display: grid;
+    grid-template-columns: repeat(20, 1fr);
+    gap: 4px;
+    width: min(32rem, 90vw);
+  }
+  .ticks span {
+    height: 12px;
+    border-radius: 3px;
+    background: var(--tick-empty);
+    transition: background 200ms;
+  }
+  .ticks span.on { background: var(--tick-fill); }
+
+  /* Play area */
+  main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(1.5rem, 5vh, 3rem);
+    width: 100%;
+  }
+  .genotype {
+    font-size: clamp(6rem, 26vw, 15rem);
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: .05em;
+    text-align: center;
+    min-height: 1em;
+  }
+  .choices {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+    width: min(64rem, 100%);
+  }
+  .choices button {
+    flex: 1 1 15rem;
+    max-width: 21rem;
+    font: inherit;
+    font-size: clamp(1.3rem, 2.6vw, 1.75rem);
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--ink);
+    background: var(--btn-bg);
+    border: 3px solid var(--ink);
+    border-radius: 16px;
+    padding: 1.1rem 1.25rem;
+    cursor: pointer;
+    transition: background 120ms, transform 80ms;
+  }
+  .choices button:hover { background: var(--btn-hover); }
+  .choices button:active { transform: scale(.97); }
+  .choices button:focus-visible,
+  .overlay button:focus-visible,
+  .win button:focus-visible {
+    outline: 4px solid var(--ink);
+    outline-offset: 4px;
+  }
+  @media (max-width: 720px) {
+    .choices { flex-direction: column; align-items: stretch; max-width: 26rem; }
+    .choices button { max-width: none; flex: none; }
+  }
+
+  /* Win state */
+  .win {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+    text-align: center;
+  }
+  .win h2 {
+    margin: 0;
+    font-size: clamp(3rem, 11vw, 7rem);
+    line-height: 1.05;
+  }
+  .win p { margin: 0; font-size: clamp(1.25rem, 3vw, 1.75rem); color: var(--muted); }
+  body.won .win { display: flex; }
+  body.won .genotype,
+  body.won .choices { display: none; }
+
+  .big-btn {
+    font: inherit;
+    font-weight: 700;
+    font-size: clamp(1.5rem, 4vw, 2.25rem);
+    color: var(--bg);
+    background: var(--ink);
+    border: none;
+    border-radius: 18px;
+    padding: 1rem 2.5rem;
+    cursor: pointer;
+  }
+
+  /* Begin overlay */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+  }
+  .overlay.hidden { display: none; }
+  .overlay .big-btn {
+    font-size: clamp(3.5rem, 14vw, 9rem);
+    padding: .3em .8em;
+    border-radius: 28px;
+  }
+
+  /* Flash */
+  #flash {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    pointer-events: none;
+    opacity: 0;
+  }
+  #flash.good { background: var(--good); animation: flash 420ms ease-out; }
+  #flash.bad  { background: var(--bad);  animation: flash 420ms ease-out; }
+  @keyframes flash {
+    0%   { opacity: 0; }
+    20%  { opacity: .6; }
+    100% { opacity: 0; }
+  }
+
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; overflow: hidden;
+    clip: rect(0 0 0 0); white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+  <div id="app">
+    <header>
+      <div class="score" aria-live="polite">
+        Points: <span id="score">0</span><span class="goal"> / 20</span>
+      </div>
+      <div class="ticks" id="ticks" aria-hidden="true"></div>
+    </header>
+
+    <main>
+      <div class="genotype" id="genotype" aria-live="assertive"></div>
+      <div class="choices" id="choices"></div>
+
+      <div class="win" id="win">
+        <h2>You did it!</h2>
+        <p>20 points reached.</p>
+        <button class="big-btn" id="again" type="button">Play again</button>
+      </div>
+    </main>
+  </div>
+
+  <div id="flash"></div>
+
+  <div class="overlay" id="overlay">
+    <button class="big-btn" id="begin" type="button">Begin!</button>
+  </div>
+
+<script>
+  const GOAL = 20;
+
+  // Letters whose capital and lowercase forms look clearly different.
+  // Skips look-alikes such as C/c, K/k, O/o, P/p, S/s, U/u, V/v, W/w, X/x, Z/z.
+  const LETTERS = "ABDEFGHJLMNQRTY".split("");
+
+  const TYPES = [
+    { key: "dom", label: "Homozygous dominant" },
+    { key: "het", label: "Heterozygous" },
+    { key: "rec", label: "Homozygous recessive" }
+  ];
+
+  const els = {
+    score: document.getElementById("score"),
+    ticks: document.getElementById("ticks"),
+    genotype: document.getElementById("genotype"),
+    choices: document.getElementById("choices"),
+    flash: document.getElementById("flash"),
+    overlay: document.getElementById("overlay"),
+    begin: document.getElementById("begin"),
+    again: document.getElementById("again")
+  };
+
+  let score = 0;
+  let current = null;
+  let lastGenotype = "";
+  let locked = true;
+
+  for (let i = 0; i < GOAL; i++) els.ticks.appendChild(document.createElement("span"));
+
+  const rand = n => Math.floor(Math.random() * n);
+
+  function shuffle(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = rand(i + 1);
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function makeGenotype() {
+    let g, type;
+    do {
+      type = TYPES[rand(3)].key;
+      const L = LETTERS[rand(LETTERS.length)];
+      const l = L.toLowerCase();
+      g = type === "dom" ? L + L : type === "het" ? L + l : l + l;
+    } while (g === lastGenotype);
+    lastGenotype = g;
+    return { g, type };
+  }
+
+  function renderScore() {
+    els.score.textContent = score;
+    const filled = Math.max(0, Math.min(GOAL, score));
+    [...els.ticks.children].forEach((t, i) => t.classList.toggle("on", i < filled));
+  }
+
+  function nextRound() {
+    current = makeGenotype();
+    els.genotype.textContent = current.g;
+    els.choices.innerHTML = "";
+    shuffle(TYPES).forEach(t => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.textContent = t.label;
+      b.addEventListener("click", () => answer(t.key));
+      els.choices.appendChild(b);
+    });
+    locked = false;
+  }
+
+  function flash(kind) {
+    els.flash.className = "";
+    void els.flash.offsetWidth; // restart animation
+    els.flash.className = kind;
+  }
+
+  function answer(key) {
+    if (locked) return;
+    locked = true;
+    if (key === current.type) {
+      score++;
+      flash("good");
+    } else {
+      score--;
+      flash("bad");
+    }
+    renderScore();
+    if (score >= GOAL) {
+      setTimeout(win, 450);
+    } else {
+      setTimeout(nextRound, 350);
+    }
+  }
+
+  function win() {
+    document.body.classList.add("won", "tilted");
+    els.again.focus();
+  }
+
+  function start() {
+    score = 0;
+    lastGenotype = "";
+    renderScore();
+    document.body.classList.remove("won", "tilted");
+    els.overlay.classList.add("hidden");
+    nextRound();
+  }
+
+  els.begin.addEventListener("click", start);
+  els.again.addEventListener("click", start);
+
+  // Number keys 1–3 pick the buttons left to right
+  document.addEventListener("keydown", e => {
+    if (locked || document.body.classList.contains("won")) return;
+    const i = ["1", "2", "3"].indexOf(e.key);
+    if (i !== -1) els.choices.children[i]?.click();
+  });
+
+  renderScore();
+  els.begin.focus();
+</script>
+</body>
+</html>
