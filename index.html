@@ -266,6 +266,31 @@
     again: document.getElementById("again")
   };
 
+  // Sounds live in the same folder as this HTML file
+  const sounds = {
+    correct: new Audio("correct.mp3"),
+    incorrect: [
+      new Audio("incorrect.mp3"),
+      new Audio("incorrect2.mp3"),
+      new Audio("incorrect3.mp3")
+    ]
+  };
+  [sounds.correct, ...sounds.incorrect].forEach(a => { a.preload = "auto"; });
+  let lastIncorrect = -1;
+
+  function playSound(audio) {
+    audio.currentTime = 0;
+    audio.play().catch(() => {}); // ignore if the browser blocks or the file is missing
+  }
+
+  function playIncorrect() {
+    // Random pick, never the same sound twice in a row
+    let i;
+    do { i = rand(sounds.incorrect.length); } while (i === lastIncorrect);
+    lastIncorrect = i;
+    playSound(sounds.incorrect[i]);
+  }
+
   let score = 0;
   let current = null;
   let lastGenotype = "";
@@ -328,9 +353,11 @@
     if (key === current.type) {
       score++;
       flash("good");
+      playSound(sounds.correct);
     } else {
       score--;
       flash("bad");
+      playIncorrect();
     }
     renderScore();
     if (score >= GOAL) {
